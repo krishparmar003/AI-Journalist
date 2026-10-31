@@ -1,4 +1,4 @@
-streamlit
+fastapi
 langgraph
 langchain-groq
 tavily-python

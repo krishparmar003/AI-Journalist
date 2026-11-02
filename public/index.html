@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Journalist</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗞️</text></svg>">
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1b1f24; --muted: #6a737d;
+    --border: #e1e4e8; --accent: #4f46e5; --accent-text: #ffffff; --ok: #1a7f37; --err: #cf222e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --card: #161b22; --text: #e6edf3; --muted: #8b949e;
+      --border: #30363d; --accent: #6366f1; --ok: #3fb950; --err: #f85149;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Devanagari", "Noto Sans Gujarati", sans-serif;
+         line-height: 1.6; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { margin: 0 0 4px; font-size: 1.9rem; }
+  .sub { margin: 0 0 24px; color: var(--muted); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 6px; }
+  textarea, select, input[type=password] {
+    width: 100%; padding: 10px 12px; font: inherit; color: var(--text);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  }
+  textarea { resize: vertical; }
+  textarea:focus, select:focus, input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin: 16px 0; }
+  .check { display: flex; gap: 8px; align-items: center; font-weight: 500; margin: 8px 0 12px; }
+  details { margin: 12px 0; }
+  summary { cursor: pointer; font-weight: 600; font-size: .9rem; }
+  .keys { display: grid; gap: 12px; margin-top: 12px; }
+  .hint { color: var(--muted); font-size: .8rem; margin: 8px 0 0; }
+  button { font: inherit; font-weight: 600; cursor: pointer; border-radius: 8px; padding: 10px 18px;
+           border: 1px solid var(--border); background: var(--card); color: var(--text); }
+  button.primary { width: 100%; background: var(--accent); color: var(--accent-text); border-color: var(--accent); padding: 12px; }
+  button:disabled { opacity: .6; cursor: wait; }
+  ul#steps { list-style: none; margin: 0; padding: 0; }
+  ul#steps li { padding: 4px 0; }
+  ul#steps li.done::before { content: "✓ "; color: var(--ok); font-weight: 700; }
+  ul#steps li.working { color: var(--muted); }
+  ul#steps li.working::before { content: ""; display: inline-block; width: 12px; height: 12px; margin-right: 8px;
+      border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .actions { display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 8px; }
+  .actions button { padding: 6px 12px; font-size: .85rem; }
+  #result { overflow-wrap: anywhere; }
+  #result h1, #result h2, #result h3 { line-height: 1.3; }
+  .error { color: var(--err); background: color-mix(in srgb, var(--err) 10%, transparent);
+           border: 1px solid var(--err); border-radius: 8px; padding: 10px 14px; }
+  .hidden { display: none; }
+  footer { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 24px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>AI Journalist 🗞️</h1>
+  <p class="sub">Researches, writes and edits articles, blogs and posts in your language.</p>
+
+  <section class="card">
+    <label for="topic">What do you want to write about?</label>
+    <textarea id="topic" rows="2" maxlength="500" placeholder="e.g. How AI is changing drug discovery"></textarea>
+
+    <div class="grid">
+      <div><label for="language">Language</label>
+        <select id="language"><option>English</option><option>Hindi</option><option>Gujarati</option><option>Marathi</option><option>Bengali</option><option>Tamil</option></select></div>
+      <div><label for="contentType">Content type</label>
+        <select id="contentType"><option>Article</option><option>Blog post</option><option>LinkedIn post</option><option>Essay</option><option>Email</option></select></div>
+      <div><label for="tone">Tone</label>
+        <select id="tone"><option>Professional</option><option>Conversational</option><option>Formal</option><option>Inspirational</option><option>Analytical</option></select></div>
+      <div><label for="length">Length</label>
+        <select id="length"><option value="short">Short (~300 words)</option><option value="medium" selected>Medium (~800 words)</option><option value="long">Long (~1500 words)</option></select></div>
+      <div><label for="model">Model</label>
+        <select id="model"><option value="llama-3.3-70b-versatile">LLaMA 3.3 70B (best quality)</option><option value="llama-3.1-8b-instant">LLaMA 3.1 8B (faster)</option></select></div>
+    </div>
+
+    <label class="check"><input type="checkbox" id="useWeb" checked> Research the web first</label>
+
+    <details id="keysBox" open>
+      <summary>Access</summary>
+      <div class="keys">
+        <div><label for="mode">How do you want to use it?</label>
+          <select id="mode"><option value="keys">Use my own API keys</option><option value="owner">Owner access (password)</option></select></div>
+        <div id="keysFields" class="keys">
+          <div><label for="groqKey">Groq API key</label><input type="password" id="groqKey" autocomplete="off" placeholder="gsk_..."></div>
+          <div><label for="tavilyKey">Tavily API key (needed for web research)</label><input type="password" id="tavilyKey" autocomplete="off" placeholder="tvly-..."></div>
+        </div>
+        <div id="ownerFields" class="hidden"><label for="ownerPw">Owner password</label><input type="password" id="ownerPw" autocomplete="off"></div>
+      </div>
+      <p class="hint" id="keysHint">Free keys: console.groq.com and app.tavily.com. Keys stay in this browser tab and are only sent with your request.</p>
+    </details>
+
+    <button id="go" class="primary">Generate</button>
+  </section>
+
+  <p id="err" class="error hidden"></p>
+
+  <section id="progress" class="card hidden"><ul id="steps"></ul></section>
+
+  <section id="out" class="card hidden">
+    <div class="actions"><button id="copy">Copy</button><button id="dl">Download .md</button></div>
+    <article id="result"></article>
+    <details id="srcBox" class="hidden"><summary>Sources</summary><ol id="sources"></ol></details>
+    <details id="fbBox" class="hidden"><summary>Editor feedback</summary><p id="feedback"></p></details>
+  </section>
+
+  <footer>Built with LangGraph, Groq and Tavily</footer>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const STEP_LABELS = {
+  plan: "Planned search queries", research: "Researched the web", write: "Wrote the draft",
+  critique: "Editor reviewed the draft", revise: "Revised the draft",
+};
+let currentDraft = "";
+
+$("groqKey").value = sessionStorage.getItem("groqKey") || "";
+$("tavilyKey").value = sessionStorage.getItem("tavilyKey") || "";
+$("ownerPw").value = sessionStorage.getItem("ownerPw") || "";
+$("mode").value = sessionStorage.getItem("mode") || "keys";
+
+function applyMode() {
+  const owner = $("mode").value === "owner";
+  $("keysFields").classList.toggle("hidden", owner);
+  $("ownerFields").classList.toggle("hidden", !owner);
+  $("keysHint").classList.toggle("hidden", owner);
+}
+$("mode").addEventListener("change", applyMode);
+applyMode();
+
+function showError(msg) { const e = $("err"); e.textContent = msg; e.classList.remove("hidden"); }
+function clearError() { $("err").classList.add("hidden"); }
+
+function setWorking(on) {
+  const old = document.querySelector("#steps li.working");
+  if (old) old.remove();
+  if (on) {
+    const li = document.createElement("li");
+    li.className = "working"; li.textContent = "Working...";
+    $("steps").appendChild(li);
+  }
+}
+function addStep(node) {
+  setWorking(false);
+  const li = document.createElement("li");
+  li.className = "done"; li.textContent = STEP_LABELS[node] || node;
+  $("steps").appendChild(li);
+  setWorking(true);
+}
+
+function showResult(r) {
+  currentDraft = r.draft || "";
+  const html = (window.marked && window.DOMPurify)
+    ? DOMPurify.sanitize(marked.parse(currentDraft)) : null;
+  if (html !== null) $("result").innerHTML = html; else $("result").textContent = currentDraft;
+
+  const list = $("sources"); list.innerHTML = "";
+  (r.sources || []).forEach((s) => {
+    const li = document.createElement("li");
+    if (/^https?:\/\//i.test(s.url)) {
+      const a = document.createElement("a");
+      a.href = s.url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = s.title || s.url;
+      li.appendChild(a);
+    } else { li.textContent = s.title || ""; }
+    list.appendChild(li);
+  });
+  $("srcBox").classList.toggle("hidden", !(r.sources || []).length);
+  $("feedback").textContent = r.feedback || "";
+  $("fbBox").classList.toggle("hidden", !r.feedback);
+  $("out").classList.remove("hidden");
+}
+
+function handleEvent(ev) {
+  if (ev.type === "step") addStep(ev.node);
+  else if (ev.type === "result") { setWorking(false); showResult(ev); }
+  else if (ev.type === "error") { setWorking(false); showError(ev.message); }
+}
+
+async function generate() {
+  clearError();
+  $("out").classList.add("hidden");
+  $("steps").innerHTML = "";
+  const topic = $("topic").value.trim();
+  if (topic.length < 3) return showError("Please enter a topic.");
+
+  const mode = $("mode").value;
+  const groqKey = $("groqKey").value.trim(), tavilyKey = $("tavilyKey").value.trim(), ownerPw = $("ownerPw").value;
+  if (mode === "owner" && !ownerPw) return showError("Enter the owner password.");
+  sessionStorage.setItem("mode", mode); sessionStorage.setItem("groqKey", groqKey);
+  sessionStorage.setItem("tavilyKey", tavilyKey); sessionStorage.setItem("ownerPw", ownerPw);
+
+  const payload = {
+    topic, language: $("language").value, content_type: $("contentType").value,
+    tone: $("tone").value, length: $("length").value, model: $("model").value, use_web: $("useWeb").checked,
+    ...(mode === "owner"
+      ? { owner_password: ownerPw }
+      : { groq_key: groqKey || null, tavily_key: tavilyKey || null }),
+  };
+
+  $("go").disabled = true; $("progress").classList.remove("hidden"); setWorking(true);
+  try {
+    const res = await fetch("/api/generate", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      let msg = "Request failed.";
+      try { const j = await res.json(); if (typeof j.detail === "string") msg = j.detail; } catch (_) {}
+      throw new Error(msg);
+    }
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf("\n\n")) >= 0) {
+        const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
+        if (chunk.startsWith("data: ")) handleEvent(JSON.parse(chunk.slice(6)));
+      }
+    }
+  } catch (e) {
+    setWorking(false); showError(e.message || "Network error.");
+  } finally {
+    setWorking(false); $("go").disabled = false;
+  }
+}
+
+$("go").addEventListener("click", generate);
+$("copy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText(currentDraft); $("copy").textContent = "Copied"; }
+  catch (_) { $("copy").textContent = "Copy failed"; }
+  setTimeout(() => ($("copy").textContent = "Copy"), 1500);
+});
+$("dl").addEventListener("click", () => {
+  const url = URL.createObjectURL(new Blob([currentDraft], { type: "text/markdown" }));
+  const a = document.createElement("a"); a.href = url; a.download = "output.md"; a.click();
+  URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>

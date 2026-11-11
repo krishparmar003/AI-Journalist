@@ -22,7 +22,7 @@ LANGUAGES = {"English", "Hindi", "Gujarati", "Marathi", "Bengali", "Tamil"}
 CONTENT_TYPES = {"Article", "Blog post", "LinkedIn post", "Essay", "Email"}
 TONES = {"Professional", "Conversational", "Formal", "Inspirational", "Analytical"}
 LENGTHS = {"short": "around 300 words", "medium": "around 800 words", "long": "around 1500 words"}
-MODELS = {"llama-3.3-70b-versatile", "llama-3.1-8b-instant"}
+MODELS = {"openai/gpt-oss-120b", "qwen/qwen3.6-27b", "openai/gpt-oss-20b"}
 
 # Two ways to use the app:
 #  1. Visitors bring their own Groq/Tavily keys (sent with the request, never stored).
@@ -38,7 +38,7 @@ class GenerateRequest(BaseModel):
     content_type: str
     tone: str
     length: str = "medium"
-    model: str = "llama-3.3-70b-versatile"
+    model: str = "openai/gpt-oss-120b"
     use_web: bool = True
     groq_key: Optional[str] = None
     tavily_key: Optional[str] = None
@@ -53,7 +53,9 @@ def friendly_error(e: Exception) -> str:
     msg = str(e)
     low = msg.lower()
     if "429" in low or "rate limit" in low:
-        return "Groq rate limit reached. Wait a minute, or switch to the 8B model."
+        return "Groq rate limit reached. Wait a minute, or switch to a smaller model."
+    if "model_not_found" in low or "does not exist" in low or "decommissioned" in low:
+        return "This model is not available on your Groq account. Pick another model in the dropdown."
     if "401" in low or "invalid api key" in low or "unauthorized" in low:
         return "Invalid API key (check your Groq and Tavily keys)."
     return f"Something went wrong: {msg[:300]}"

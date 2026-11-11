@@ -24,7 +24,9 @@ class WriterState(TypedDict, total=False):
 
 
 def _ask(llm, system: str, user: str) -> str:
-    return llm.invoke([SystemMessage(content=system), HumanMessage(content=user)]).content.strip()
+    text = llm.invoke([SystemMessage(content=system), HumanMessage(content=user)]).content
+    # Some reasoning models return their chain of thought inside <think> tags; drop it.
+    return re.sub(r"<think>.*?</think>", "", text, flags=re.S).strip()
 
 
 def build_graph(llm, search_fn: Callable[[str], List[dict]]):

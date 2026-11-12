@@ -5,7 +5,8 @@ A multilingual AI agent that researches the web, then writes and edits articles,
 
 🚀 **Live Demo:** [ai-journalist-nu.vercel.app](https://ai-journalist-nu.vercel.app/)
 
-![App Screenshot](screenshot.png)
+![App Screenshot](<img width="709" height="359" alt="image" src="https://github.com/user-attachments/assets/80e02c23-09e9-4c3e-abf8-80a525bbec11" />
+)
 
 ---
 

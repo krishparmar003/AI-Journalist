@@ -53,7 +53,7 @@ myenv\Scripts\activate
 pip install -r requirements.txt uvicorn
 ```
 
-Create a `.env` file (see `.env.example`):
+Create a `.env` file:
 
 ```
 OWNER_PASSWORD=your_long_passphrase
